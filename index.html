@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAV Cable Optimization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        .tool {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        a.button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 15px;
+            text-decoration: none;
+            background-color: #007acc;
+            color: #fff;
+            border-radius: 3px;
+        }
+
+        a.button:hover {
+            background-color: #005fa3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Tethered UAV Cable Optimization</h1>
+    <p>Welcome to the tethered UAV cable optimization landing page. These tools are based on the research presented in
+        the paper "<strong>Cable Optimization and Drag Estimation for
+            Tether-Powered Multirotor UAVs</strong>". These tools help design efficient tethered UAVs by optimizing
+        cable parameters and estimating aerodynamic drag. If you use them in your research, please cite the paper.</p>
+
+    <div class="tool">
+        <h2>Cable Optimization</h2>
+        <p>This tool assists in selecting the optimal tether cable for tether-powered multirotor UAVs, balancing
+            electrical losses, weight, and aerodynamic drag. It supports both predefined and custom motor efficiency
+            curves, allowing users to tailor calculations to their specific UAV setup.</p>
+        <p><a class="button" href="CableOptimization/index.html">Go to Cable Optimization Tool</a></p>
+    </div>
+
+    <div class="tool">
+        <h2>Drag Estimation</h2>
+        <p>This tool estimates the forward drag coefficient of a UAV based on flight data from ArduCopter log files. The
+            results can be used into the Cable Optimization Tool to optimize for
+            forward flight.</p>
+        <p><a class="button" href="DragEstimation/index.html">Go to Drag Estimation Tool</a></p>
+    </div>
+
+    <div class="footer">
+        <p>The code for these tools, as well as a Python example, is available on <a
+                href="https://github.com/cogsys-tuebingen/UAV-Cable-Optimization" target="_blank">GitHub</a>.</p>
+    </div>
+</div>
+</body>
+</html>
