@@ -36,16 +36,6 @@
         attachContextMenu(".downloadable"); // Attach to divs with this class
     </script>
 
-    <script>
-        document.querySelectorAll(".track-button").forEach(button => {
-            button.addEventListener("click", function () {
-                gtag("event", "button_click", {
-                    "event_category": "interaction",
-                    "event_label": this.data.analyticsLabel
-                });
-            });
-        });
-    </script>
 
     <style>
         input[type="number"] {
@@ -158,6 +148,16 @@
     </p>
 </div>
 
+<script>
+    document.querySelectorAll(".track-button").forEach(button => {
+        button.addEventListener("click", function () {
+            gtag("event", "button_click", {
+                "event_category": "interaction",
+                "event_label": this.getAttribute("data-analyticsLabel")
+            });
+        });
+    });
+</script>
 
 <script>
     let DataflashParser
