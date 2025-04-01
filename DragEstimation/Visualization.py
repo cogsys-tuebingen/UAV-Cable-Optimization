@@ -66,24 +66,10 @@ def visualize_drag(drag, browser=False):
 
     residuals = drag.drags - drag_estimates
     mae = np.mean(np.abs(residuals))
-    # rmse = np.sqrt(np.mean(residuals ** 2))
-    # rmse_adjusted = np.sqrt(rmse ** 2 - drag.noise_stdev ** 2)
-
-    mask = np.logical_or(np.logical_and(velocities < 0, pitches < 0),
-                         np.logical_and(velocities > 0, pitches > 0))
-
-    chi_sum = (residuals[mask] / drag.smoothed_noise[mask]) ** 2
-    chi = np.sum(chi_sum) / (len(residuals[mask]) - 2)
-    # print(chi)
-
-    # plt.figure()
-    # plt.hist(chi_sum, bins=200, color='skyblue', edgecolor='black')
-    # plt.show()
 
     fig = plt.figure(figsize=(6, 4.5))
-    # plt.title("Drag Estimation with Linear Velocity Term")
     plt.scatter(velocities, residuals, color='g', alpha=0.1,
-                label=f'residuals (MAE {mae:.2f})($\\chi^2_\\nu$ {chi:.2f})')
+                label=f'residuals (MAE {mae:.2f})')
     plt.scatter(velocities, drag.drags, color='b', alpha=0.05, label='measured drag')
     plt.scatter(velocities, drag_estimates, color='r', alpha=0.05, label='estimated drag')
     plt.plot(velocity_range, equilibrium_drags, color='y', label='equilibrium')
@@ -121,7 +107,7 @@ def visualize_drag(drag, browser=False):
                     zorder=0, label='estimated drag')
     # ax.scatter(pitches, velocities, drags, color='r', alpha=0.1)
     r = ax.scatter(pitches, velocities, residuals, c=residuals, alpha=0.2, cmap='viridis',
-                   label=f'residuals (MAE {mae:.2f})($\\chi^2_\\nu$ {chi:.2f})')
+                   label=f'residuals (MAE {mae:.2f})')
     ax.plot(equilibrium_pitches, velocity_range, equilibrium_drags, color='r', alpha=0.4, label='equilibrium')
 
     ax.set_xlabel('Pitch (degrees)')
