@@ -57,6 +57,11 @@ export function attachContextMenu(containerSelector = ".downloadable") {
                 li.onclick = () => {
                     downloadSVG(svgElement, customFilename);
                     contextMenu.style.display = "none";
+
+                    gtag("event", "file_download", {
+                        "file_name": customFilename,
+                        "file_extension": "svg"
+                    });
                 };
             }
         } else {

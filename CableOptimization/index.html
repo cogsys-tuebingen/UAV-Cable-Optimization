@@ -36,6 +36,17 @@
         attachContextMenu(".downloadable"); // Attach to divs with this class
     </script>
 
+    <script>
+        document.querySelectorAll(".track-button").forEach(button => {
+            button.addEventListener("click", function () {
+                gtag("event", "button_click", {
+                    "event_category": "interaction",
+                    "event_label": this.data.analyticsLabel
+                });
+            });
+        });
+    </script>
+
     <style>
     </style>
 
@@ -118,7 +129,9 @@
             <button id="devTools" style="display:none" onclick="loadPythonCode()">
                 <img style="height:1em; width:1em;" src="graphics/wrench.svg" alt="Dev">
             </button>
-            <button id="example" onclick="loadExample()" disabled>Load Example</button>
+            <button id="example" class="track-button" data-analyticsLabel="optimization_example" onclick="loadExample()"
+                    disabled>Load Example
+            </button>
             <button id="createPlot" onclick="onDataChange()" disabled>Create Plot</button>
         </div>
         <div>
@@ -203,6 +216,7 @@
             target="_blank">GitHub</a>.
     </p>
 </div>
+
 
 <script>
     let pyodide;

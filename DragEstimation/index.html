@@ -36,6 +36,17 @@
         attachContextMenu(".downloadable"); // Attach to divs with this class
     </script>
 
+    <script>
+        document.querySelectorAll(".track-button").forEach(button => {
+            button.addEventListener("click", function () {
+                gtag("event", "button_click", {
+                    "event_category": "interaction",
+                    "event_label": this.data.analyticsLabel
+                });
+            });
+        });
+    </script>
+
     <style>
         input[type="number"] {
             width: 60px;
@@ -81,8 +92,11 @@
     <button id="devTools" style="display:none" onclick="loadPythonCode()">
         <img style="height:1em; width:1em;" src="graphics/wrench.svg" alt="Dev">
     </button>
-    <button id="example" onclick="loadExample()" disabled>Load Example</button>
-    <input type="file" id="fileInput" accept=".bin" onchange="fileChanged()" disabled>
+    <button id="example" class="track-button" data-analyticsLabel="drag_example" onclick="loadExample()" disabled>Load
+        Example
+    </button>
+    <input type="file" id="fileInput" accept=".bin" class="track-button" data-analyticsLabel="drag_custom"
+           onchange="fileChanged()" disabled>
 </div>
 <div style="margin:10px;">
     <label for="start">Start [s]:</label>
@@ -93,7 +107,9 @@
     <input type="number" id="pitchOffset" value="0" onchange="processData()">
     <label for="droneMass">Drone Mass [kg]:</label>
     <input type="number" id="droneMass">
-    <button onclick="estimateDrag()" id="estimateButton" disabled>Estimate</button>
+    <button onclick="estimateDrag()" id="estimateButton" class="track-button" data-analyticsLabel="drag_example"
+            disabled>Estimate
+    </button>
 </div>
 <div id="status" style="margin:10px; line-height:1em;">Initializing...</div>
 <div id="container" style="display:flex; flex-direction:column; margin:10px;">
