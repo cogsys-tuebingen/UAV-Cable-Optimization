@@ -12,8 +12,8 @@ def visualize_input(drag, browser=False):
 
     fig = plt.figure(figsize=(6, 3))
 
-    plt.plot(drag.df['time'] / 1000000, drag.df['AX'], label='expected acceleration', color='b', linewidth=0.5)
-    plt.plot(drag.df['time'] / 1000000, drag.df['AX_V'], label='observed acceleration', color='dodgerblue',
+    plt.plot(drag.df['time'] / 1000000, drag.df['AX_e'], label='expected acceleration', color='b', linewidth=0.5)
+    plt.plot(drag.df['time'] / 1000000, drag.df['AX_o'], label='observed acceleration', color='dodgerblue',
              linewidth=0.5)
     plt.plot(drag.df['time'] / 1000000, drag.df['DX'], label=f'drag ($\\sigma=${drag.noise_stdev:.2f})', color='orange',
              linewidth=0.5)

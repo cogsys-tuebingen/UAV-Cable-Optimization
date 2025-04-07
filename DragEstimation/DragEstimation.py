@@ -59,21 +59,19 @@ class DragEstimation:
         # calculate stabilized frame velocity
         self.df['VX'] = cos_yaw * self.df['VN'] + sin_yaw * self.df['VE']
 
-        # calculate stabilized frame acceleration
+        # calculate observed acceleration in stabilized body frame
         # forward direction
-        self.df['AX_V'] = 1000000 * self.df['VX'].diff() / self.df['time'].diff()
-        self.df['AX_V'] = self.df['AX_V'].bfill()
+        self.df['AX_o'] = np.gradient(self.df['VX'], self.df['time'] / 1000000)
         # downward direction
-        self.df['AD_V'] = 1000000 * self.df['VD'].diff() / self.df['time'].diff()
-        self.df['AD_V'] = self.df['AD_V'].bfill()
+        self.df['AD_o'] = np.gradient(self.df['VD'], self.df['time'] / 1000000)
 
         # calculate acceleration from pitch
-        # thrust_a = (-DragEstimation.gravity + self.df['AD_V']) / (cos_pitch * cos_roll)
-        # self.df['AX'] = thrust_a * sin_pitch
-        self.df['AX'] = (-DragEstimation.gravity + self.df['AD_V']) * tan_pitch / cos_roll
+        # thrust_a = (-DragEstimation.gravity + self.df['AD_o']) / (cos_pitch * cos_roll)
+        # self.df['AX_e'] = thrust_a * sin_pitch
+        self.df['AX_e'] = (-DragEstimation.gravity + self.df['AD_o']) * tan_pitch / cos_roll
 
         # calculate drag
-        self.df['DX'] = self.df['AX'] - self.df['AX_V']
+        self.df['DX'] = self.df['AX_e'] - self.df['AX_o']
 
         # invert pitch so the sign matches the acceleration
         self.df['pitch'] = -self.df['pitch']
