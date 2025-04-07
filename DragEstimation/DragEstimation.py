@@ -19,7 +19,7 @@ class DragEstimation:
                         self.data.append({
                             'time': msg.TimeUS,
                             'pitch': msg.Pitch,
-                            # 'roll': msg.Roll,
+                            'roll': msg.Roll,
                             'yaw': msg.Yaw,
                             'VE': msg.VE,
                             'VN': msg.VN,
@@ -49,9 +49,12 @@ class DragEstimation:
         self.df['pitch'] = self.df['pitch'] - pitch_offset
 
         # do trigonometry
-        tan_pitch = np.tan(np.radians(self.df['pitch']))
+        # sin_pitch = np.sin(np.radians(self.df['pitch']))
         sin_yaw = np.sin(np.radians(self.df['yaw']))
+        # cos_pitch = np.cos(np.radians(self.df['pitch']))
+        cos_roll = np.cos(np.radians(self.df['roll']))
         cos_yaw = np.cos(np.radians(self.df['yaw']))
+        tan_pitch = np.tan(np.radians(self.df['pitch']))
 
         # calculate stabilized frame velocity
         self.df['VX'] = cos_yaw * self.df['VN'] + sin_yaw * self.df['VE']
@@ -65,7 +68,9 @@ class DragEstimation:
         self.df['AD_V'] = self.df['AD_V'].bfill()
 
         # calculate acceleration from pitch
-        self.df['AX'] = (-DragEstimation.gravity + self.df['AD_V']) * tan_pitch
+        # thrust_a = (-DragEstimation.gravity + self.df['AD_V']) / (cos_pitch * cos_roll)
+        # self.df['AX'] = thrust_a * sin_pitch
+        self.df['AX'] = (-DragEstimation.gravity + self.df['AD_V']) * tan_pitch / cos_roll
 
         # calculate drag
         self.df['DX'] = self.df['AX'] - self.df['AX_V']
