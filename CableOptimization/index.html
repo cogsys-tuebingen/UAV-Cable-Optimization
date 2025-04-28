@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<head>
+    <title>UAV Cable Optmization</title>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2XCQRDB4WS"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+
+        gtag('js', new Date());
+        gtag('config', 'G-2XCQRDB4WS');
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+
+    <!-- KaTeX to render latex equations -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css"
+          integrity="sha384-zh0CIslj+VczCZtlzBcjt5ppRcsAmDnRem7ESsYwWwg3m/OaJ2l4x7YBZl9Kxxib" crossorigin="anonymous">
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"
+            integrity="sha384-Rma6DA2IPUwhNxmrB/7S3Tno0YY7sFu9WSYMCuulLhIqYSGZ2gKCJWIqhBWqMQfh"
+            crossorigin="anonymous"></script>
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"
+            integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"
+            onload="renderMathInElement(document.body);"></script>
+
+    <script type="module">
+        import {attachContextMenu} from "./downloadSvg.js";
+
+        attachContextMenu(".downloadable"); // Attach to divs with this class
+    </script>
+
+    <style>
+    </style>
+
+    <style>
+        table {
+            border-collapse: collapse; /* Ensures cell dividers without double borders */
+            width: 100%;
+            border: 2px solid black; /* Single border around the table */
+        }
+
+        th, td {
+            border: 1px solid black; /* Cell dividers */
+            text-align: center;
+            padding: 5px;
+        }
+
+        input.tab {
+            border: none; /* Removes border around input */
+            width: 50px; /* Adjust input width */
+            text-align: center;
+            outline: none; /* Prevents border on focus */
+        }
+
+        tab:focus {
+            outline: none; /* Removes highlight when input is clicked */
+        }
+
+        input[type="number"] {
+            appearance: textfield; /* Remove up/down buttons */
+            -moz-appearance: textfield;
+            -webkit-appearance: textfield;
+        }
+
+        input:not(.tab) {
+            width: 82px
+        }
+
+        .pe {
+            margin-bottom: 3px;
+        }
+
+        .footer {
+            margin-left: 10px;
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
+
+</head>
+<body>
+<h1 style="margin-left:10px;">Cable Optimization</h1>
+<div style="margin:10px;">
+    <p>
+        This tool generates plots to determine the optimal cable cross-section for tether-powered multirotors.<br>
+        The table lists the efficiency of the motor and propeller combination at different thrust levels.<br>
+        This data can be taken from the motor manufacturer’s datasheet or measured on a test bench.<br>
+        You can select one of the provided motors, edit an existing motor curve, or enter a fully custom motor curve.
+    </p>
+    <p>
+        After inputting the remaining drone parameters, the plots are automatically generated or can be created manually
+        by clicking <b>“Create Plot.”</b><br>
+        If no specific drone data is available, the <b>“Load Example”</b> button can be used.<br>
+        If optimization for forward flight is not required, the corresponding drag parameters can be left empty.<br>
+        To save plots as SVG vector files, right-click on them and select <b>“Download SVG.”</b></p>
+</div>
+<div style="margin:10px;">
+    <table id="dynamicTable"></table>
+    </table>
+</div>
+<div style="margin:10px;">
+    <label for="motors">Motor:</label>
+    <select id="motors" onchange="motorChanged()"></select>
+    <button onclick="tableClear()">Clear</button>
+</div>
+<div id="status" style="margin:10px; line-height: 1em;">Initializing...</div>
+<div style="display: flex; flex-direction: row; margin:10px;">
+    <div>
+        <div style="margin-bottom:10px">
+            <button id="devTools" style="display:none" onclick="loadPythonCode()">
+                <img style="height:1em; width:1em;" src="graphics/wrench.svg" alt="Dev">
+            </button>
+            <button id="example" class="track-button" data-analyticsLabel="optimization_example" onclick="loadExample()"
+                    disabled>Load Example
+            </button>
+            <button id="createPlot" onclick="onDataChange()" disabled>Create Plot</button>
+        </div>
+        <div>
+            <b>General:</b>
+            <div class="pe">
+                <input type="number" id="droneMass" onchange="onDataChange(true)">
+                <label for="droneMass">Drone Mass [g]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="motorCount" value="4" onchange="onDataChange(true)">
+                <label for="motorCount">Motor Count</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="flightHeight" onchange="onDataChange(true)">
+                <label for="flightHeight">Flight height [m]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="tetherVoltage" onchange="onDataChange(true)">
+                <label for="tetherVoltage">Tether Voltage [V]</label>
+            </div>
+            <div class="pe">
+                <select id="conductorMaterial" style="width:90px;" onchange="onDataChange(true)">
+                    <option value="aluminium">Aluminium</option>
+                    <option value="copper">Copper</option>
+                </select>
+                <label for="conductorMaterial">Conductor Material</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="insulationThickness" value="0.75" onchange="onDataChange(true)">
+                <label for="insulationThickness">Insulation Thickness [mm]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="converterEfficiency" value="0.9" onchange="onDataChange(true)">
+                <label for="converterEfficiency">Converter Efficiency [0-1]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="converterVoltage" value="0" onchange="onDataChange(true)">
+                <label for="converterVoltage">Converter Min Voltage [V]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="payloadPower" value="0" onchange="onDataChange(true)">
+                <label for="payloadPower">Payload Power [W]</label>
+            </div>
+        </div>
+
+        <div style="margin-top:10px;">
+            <b>Drag:</b>
+            <div style="margin-bottom:10px;">
+                \( A(\theta)=A_f*\cos{|\theta|}+A_t*\sin{|\theta|} \)<br>
+                \( F_D(v, \theta)=\frac{1}{2}\rho_{air}A(\theta)(v^2 + jv) \)
+            </div>
+            <div class="pe">
+                <input type="number" id="targetVelocity" onchange="onDataChange(true)">
+                <label for="targetVelocity">Target Velocity [m/s]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="frontArea" onchange="onDataChange(true)">
+                <label for="frontArea">\( A_f \) [m²]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="topArea" onchange="onDataChange(true)">
+                <label for="frontArea">\( A_t \) [m²]</label>
+            </div>
+            <div class="pe">
+                <input type="number" id="linearFactor" onchange="onDataChange(true)">
+                <label for="linearFactor">j [m/s]</label>
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; flex-direction:row; flex:1; flex-wrap:wrap; margin-left:40px;">
+        <div style="display:flex; flex:1; justify-content:center;">
+            <div id="plot" class="downloadable" data-filename="cable_optimization.svg"></div>
+        </div>
+        <div style="display:flex; flex:1; justify-content:center;">
+            <div id="motorCurves" class="downloadable" data-filename="motor_curves.svg"></div>
+        </div>
+    </div>
+</div>
+<div class="footer">
+    <p>The code for this tools, as well as a Python example, is available on <a
+            href="https://github.com/cogsys-tuebingen/UAV-Cable-Optimization"
+            target="_blank">GitHub</a>.
+    </p>
+</div>
+
+<script>
+    document.querySelectorAll(".track-button").forEach(button => {
+        button.addEventListener("click", function () {
+            gtag("event", "button_click", {
+                "event_category": "interaction",
+                "event_label": this.getAttribute("data-analyticsLabel")
+            });
+        });
+    });
+</script>
+
+<script>
+    let pyodide;
+    let numpy;
+    let scipy;
+    let matplotlib;
+    let python;
+    let visualization;
+    let cable;
+    let isUpdating = false;
+    let pendingUpdate = false;
+
+
+    if (window.location.protocol === "file:") {
+        document.getElementById("devTools").style.display = "inline-block";
+    }
+
+    async function initPyodide() {
+        try {
+            pyodide = await loadPyodide();
+            document.getElementById('example').disabled = false;
+            document.getElementById('createPlot').disabled = false;
+            document.getElementById('status').innerHTML = 'Ready';
+
+            // Install required packages
+            numpy = pyodide.loadPackage("numpy");
+            scipy = pyodide.loadPackage("scipy");
+            matplotlib = pyodide.loadPackage("matplotlib");
+
+            await loadPythonCode();
+
+        } catch (error) {
+            console.error('Error initializing Pyodide:', error);
+        }
+    }
+
+    async function loadPythonCode() {
+        // Fetch the Python code from the .py file
+        const response = await fetch('CableOptimization.py');
+        const pythonCode = await response.text();
+        await numpy; //numpy is used everywhere. No point to defer
+        // Run the Python code to define the class and function
+        python = pyodide.runPythonAsync(pythonCode);
+
+        const response_vis = await fetch('Visualization.py');
+        const pythonCode_vis = await response_vis.text();
+        visualization = pyodide.runPythonAsync(pythonCode_vis);
+    }
+
+    // Call initPyodide immediately
+    initPyodide();
+
+    async function loadExample() {
+        document.getElementById('example').disabled = true;
+
+        document.getElementById("motors").value = "holybro2216_920_10";
+        await updateMotor();
+        document.getElementById('droneMass').value = 1710;
+        document.getElementById('motorCount').value = 4;
+        document.getElementById('flightHeight').value = 30;
+        document.getElementById('tetherVoltage').value = 75;
+        document.getElementById('conductorMaterial').value = "aluminium";
+        document.getElementById('insulationThickness').value = 0.75;
+        document.getElementById('converterEfficiency').value = 0.9;
+        document.getElementById('converterVoltage').value = 20;
+        document.getElementById('payloadPower').value = 15;
+        document.getElementById('targetVelocity').value = 8.33333333;
+        document.getElementById('frontArea').value = 0.01451;
+        document.getElementById('topArea').value = 0.01361;
+        document.getElementById('linearFactor').value = 19.27;
+
+        await onDataChange(true);
+        document.getElementById('example').disabled = false;
+    }
+
+    async function cellChanged() {
+        motor_data["custom"] = tableToDict();
+        document.getElementById("motors").value = "custom";
+        await onDataChange(true);
+    }
+
+    async function motorChanged() {
+        await updateMotor();
+        await onDataChange(true);
+    }
+
+    async function updateMotor() {
+        let motor = document.getElementById("motors").value;
+        if (motor === "custom" && Object.keys(motor_data["custom"]).length <= 1) return;
+        await tableFromDict(motor_data[motor]);
+
+        let plot_div = document.getElementById("plot");
+        plot_div.setAttribute("data-filename", "cable_optimization_" + motor + ".svg");
+    }
+
+    async function tableClear(clearCustom = true) {
+        for (let r = 1; r < table.rows.length; r++) {
+            for (let c = 0; c < table.rows[r].cells.length - 1; c++) {
+                tableSet(r, c, "")
+            }
+        }
+        if (clearCustom) {
+            await cellChanged();
+        }
+    }
+
+    async function onDataChange(automatic = false) {
+        document.getElementById('createPlot').disabled = true;
+        pendingUpdate = true;
+
+        if (isUpdating) return;
+
+        isUpdating = true;
+
+        while (pendingUpdate) {
+            pendingUpdate = false;
+            await createPlot(automatic);
+        }
+        isUpdating = false;
+        document.getElementById('createPlot').disabled = false;
+    }
+
+    async function createPlot(automatic = false) {
+        let motorValues = getTableValues();
+        if (motorValues[0].length < 1) return;
+
+        let droneMass = parseFloat(document.getElementById('droneMass').value);
+        let motorCount = parseFloat(document.getElementById('motorCount').value) || 4;
+        let flightHeight = parseFloat(document.getElementById('flightHeight').value);
+        let tetherVoltage = parseFloat(document.getElementById('tetherVoltage').value);
+        let conductorMaterial = document.getElementById('conductorMaterial').value;
+        let insulationThickness = parseFloat(document.getElementById('insulationThickness').value) || 0.75;
+        let converterEfficiency = parseFloat(document.getElementById('converterEfficiency').value) || 0.9;
+        let converterVoltage = parseFloat(document.getElementById('converterVoltage').value) || 0;
+        let payloadPower = parseFloat(document.getElementById('payloadPower').value) || 0;
+        let targetVelocity = parseFloat(document.getElementById('targetVelocity').value) || 0;
+        let frontArea = parseFloat(document.getElementById('frontArea').value) || 0;
+        let topArea = parseFloat(document.getElementById('topArea').value) || 0;
+        let linearFactor = parseFloat(document.getElementById('linearFactor').value) || 0;
+
+        document.getElementById('motorCount').value = motorCount;
+        document.getElementById('insulationThickness').value = insulationThickness;
+        document.getElementById('converterEfficiency').value = converterEfficiency;
+        document.getElementById('converterVoltage').value = converterVoltage;
+        document.getElementById('payloadPower').value = payloadPower;
+
+        if (isNaN(droneMass) || isNaN(flightHeight) || isNaN(tetherVoltage) || isNaN(insulationThickness)) {
+            if (!automatic) {
+                alert("Please enter parameters!")
+            }
+            return;
+        }
+
+        if (targetVelocity !== 0) {
+            if (frontArea === 0 || topArea === 0) {
+                if (!automatic) {
+                    alert("A_f and A_t must be non zero for drag estimation!")
+                }
+                return;
+            }
+        }
+
+        document.getElementById('status').innerHTML = 'Setup...';
+        try {
+            await python
+            await numpy
+
+            if (!cable) {
+                await pyodide.runPythonAsync('cable = CableOptimization()');
+                //grab class from python to be used in java script
+                cable = pyodide.globals.get("cable");
+            }
+
+            cable.set_conductor(conductorMaterial);
+            cable.drone_mass = droneMass;
+            cable.motor_count = motorCount;
+            cable.flight_height = flightHeight;
+            cable.set_voltage(tetherVoltage, converterVoltage);
+            cable.insulation_thickness = insulationThickness;
+            cable.converter_efficiency = converterEfficiency;
+            cable.payload_power = payloadPower;
+            cable.target_velocity = targetVelocity;
+            cable.drag_estimation_parameters = [frontArea, topArea, linearFactor, 0];
+
+            cable.set_motor_curve(pyodide.toPy(motorValues.slice(1)))
+
+            document.getElementById('status').innerHTML = 'Loading modules...';
+            await scipy
+            await matplotlib;
+            await visualization;
+            document.getElementById('status').innerHTML = 'Generating plot...';
+
+            await pyodide.runPythonAsync("visualize(cable, browser=True)");
+
+            setMotorCurves = pyodide.globals.get("set_motor_curves");
+            setMotorCurves(pyodide.toPy(motor_data));
+            await pyodide.runPythonAsync("visualize_all(cable, motor_curves, browser=True)");
+
+            document.getElementById('status').innerHTML = 'Done &#128568;';
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('status').innerHTML = 'Error creating plot: ' + error.message;
+        }
+    }
+
+    let table
+    let motor_data = {
+        "tmotor2212_780_95": {
+            "name": "TMotor MN2212 780KV 16V 9.5\"",
+            "50": [293, 9.43],
+            "65": [476, 8.04],
+            "75": [605, 7.3],
+            "85": [742, 6.78],
+            "100": [918, 6.02]
+        },
+        "holybro2216_920_10": {
+            "name": "Holybro AIR2216 920KV 16V 10\"",
+            "30": [210, 9.12],
+            "35": [259, 8.67],
+            "40": [309, 8.45],
+            "45": [373, 8.15],
+            "50": [447, 7.76],
+            "55": [536, 7.39],
+            "60": [628, 7.01],
+            "65": [729, 6.73],
+            "70": [814, 6.44],
+            "75": [906, 6.18],
+            "80": [993, 5.88],
+            "85": [1087, 5.65],
+            "90": [1191, 5.43],
+            "95": [1289, 5.18],
+            "100": [1332, 5.13]
+        },
+        //"tmotor2806_400_12": {"name": "TMotor MN2806 400KV 24V 12\"", "40": [230, 12.91], "45": [282, 11.93], "50": [344, 11.11], "55": [398, 10.5], "60": [458, 9.83], "65": [511, 9.26], "70": [568, 8.7], "75": [642, 8.33], "80": [705, 7.97], "85": [774, 7.59], "90": [845, 7.24], "95": [915, 6.91], "100": [958, 6.65]},
+        "tmotor2806_650_12": {
+            "name": "TMotor MN2806 650KV 16V 12\"",
+            "40": [237, 12.66],
+            "45": [314, 11.47],
+            "50": [361, 10.71],
+            "55": [438, 9.85],
+            "60": [492, 9.43],
+            "65": [568, 8.78],
+            "70": [631, 8.34],
+            "75": [714, 7.75],
+            "80": [772, 7.45],
+            "85": [865, 7.02],
+            "90": [919, 6.73],
+            "95": [999, 6.34],
+            "100": [1036, 6.17]
+        },
+        //"tmotor2806_400_13": {"name": "TMotor MN2806 400KV 24V 13\"","40": [262, 12.85],"45": [325, 12.11],"50": [398, 11.24],"55": [458, 10.36],"60": [531, 9.78],"65": [592, 9.26],"70": [660, 8.71],"75": [729, 8.25],"80": [798, 7.86],"85": [875, 7.47],"90": [947, 7.06],"95": [1018, 6.72],"100": [1068, 6.53]},
+        "tmotor2806_650_13": {
+            "name": "TMotor MN2806 650KV 16V 13\"",
+            "40": [269, 13.16],
+            "45": [346, 11.87],
+            "50": [417, 10.89],
+            "55": [485, 10.06],
+            "60": [557, 9.34],
+            "65": [626, 8.78],
+            "70": [700, 8.36],
+            "75": [785, 7.9],
+            "80": [863, 7.44],
+            "85": [941, 7.04],
+            "90": [1015, 6.66],
+            "95": [1090, 6.35],
+            "100": [1138, 6.1]
+        },
+        //"tmotor3110_700_12": {"name": "TMotor MN3110 700KV 16V 12\"", "50": [420, 8.87], "65": [790, 8.61], "75": [930, 7.39], "85": [1190, 6.93], "100": [1290, 6.23]},
+        "tmotor3110_780_11": {
+            "name": "TMotor MN3110 780KV 16V 11\"",
+            "50": [430, 8.55],
+            "65": [700, 7.28],
+            "75": [880, 6.48],
+            "85": [1100, 5.99],
+            "100": [1260, 5.71]
+        },
+        "tmotor3110_470_15": {
+            "name": "TMotor MN3110 470KV 16V 15\"",
+            "50": [460, 14.13],
+            "65": [730, 11.47],
+            "75": [930, 10.14],
+            "85": [1100, 9.06],
+            "100": [1220, 8.68]
+        },
+        "tmotor3510_700_11": {
+            "name": "TMotor MN3510 700KV 16V 11\"",
+            "50": [460, 9.71],
+            "65": [710, 8.00],
+            "75": [870, 7.17],
+            "85": [1080, 6.63],
+            "100": [1230, 6.39]
+        },
+        "iflight4214_400_14": {
+            "name": "IFlight 4214 400KV 24V 14\"",
+            "50": [863, 9.220],
+            "60": [1267, 8.380],
+            "70": [1705, 7.639],
+            "80": [2146, 6.932],
+            "90": [2683, 6.425],
+            "100": [2953, 6.214]
+        },
+        "tmotor4014_400_15": {
+            "name": "TMotor MN4014 400KV 24V 15\"",
+            "50": [1250, 9.88],
+            "65": [1630, 8.07],
+            "75": [1950, 7.32],
+            "85": [2370, 6.76],
+            "100": [2620, 6.31]
+        },
+        "custom": {
+            "name": "Custom"
+        }
+    };
+
+    function generateTable() {
+        console.log("generating table");
+        table = document.getElementById("dynamicTable");
+        table.innerHTML = ""; // Clear previous table
+
+        // Create the header row
+        let headerRow = table.insertRow();
+        let th = document.createElement("th");
+        th.textContent = "Throttle [%]"
+        headerRow.appendChild(th);
+
+        for (let c = 0; c < 20; c++) {
+            let th = document.createElement("th");
+            th.textContent = 5 + c * 5;
+            headerRow.appendChild(th);
+        }
+
+        // Create two editable rows
+        for (let r = 1; r < 3; r++) {
+            let row = table.insertRow();
+            let th = document.createElement("th");
+            switch (r) {
+                case 1:
+                    th.textContent = "Thrust [g]";
+                    break;
+                case 2:
+                    th.textContent = "Efficiency [g/W]";
+                    break;
+            }
+            row.appendChild(th);
+            for (let c = 0; c < 20; c++) {
+                let cell = row.insertCell();
+                let input = document.createElement("input");
+                input.type = "number";
+                input.className = "tab";
+                input.onchange = cellChanged;
+                cell.appendChild(input);
+            }
+        }
+    }
+
+    function tableGet(r, c) {
+        c = c + 1
+        if (r > 0) {
+            return parseFloat(table.rows[r].cells[c].querySelector("input").value);
+        } else {
+            return parseFloat(table.rows[r].cells[c].innerHTML);
+        }
+    }
+
+    function tableSet(r, c, v) {
+        c = c + 1
+        if (r === 0) return;
+        table.rows[r].cells[c].querySelector("input").value = v;
+    }
+
+    function tableSerialize() {
+        let dict = tableToDict();
+        console.log(dict);
+        console.log(JSON.stringify(dict));
+    }
+
+    function getTableValues() {
+        let values = [];
+        let valid = new Array(table.rows[0].cells.length - 1);
+
+        for (let c = 0; c < table.rows[0].cells.length - 1; c++) {
+            if (!isNaN(tableGet(1, c)) && !isNaN(tableGet(2, c))) {
+                valid[c] = true;
+            }
+        }
+
+        for (let r = 0; r < table.rows.length; r++) {
+            let rowData = [];
+            for (let c = 0; c < table.rows[r].cells.length - 1; c++) {
+                if (valid[c]) {
+                    rowData.push(tableGet(r, c));
+                }
+            }
+            values.push(rowData);
+        }
+        return values;
+    }
+
+    function tableToDict() {
+        let table_content = getTableValues();
+        const keys = table_content[0];
+        const dictionary = {};
+
+        dictionary["name"] = "Custom";
+
+        keys.forEach((key, index) => {
+            key = parseFloat(key);
+            dictionary[key] = [];
+            for (let r = 1; r < table_content.length; r++) {
+                dictionary[key].push(parseFloat(table_content[r][index]));
+            }
+        });
+        return dictionary;
+    }
+
+    async function tableFromDict(dictionary) {
+        await tableClear(false);
+        for (const [key, value] of Object.entries(dictionary)) {
+            if (key === "name") continue;
+            c = Math.round((key - 5) / 5);
+            for (let r = 1; r < value.length + 1; r++) {
+                tableSet(r, c, value[r - 1]);
+            }
+        }
+    }
+
+    function generateMotors() {
+        let motors = document.getElementById("motors");
+        for (const [key, value] of Object.entries(motor_data)) {
+            let opt = document.createElement("option");
+            opt.value = key;
+            opt.innerHTML = value["name"];
+            motors.appendChild(opt);
+        }
+    }
+
+    // generate the table when the page loads
+    generateTable();
+    generateMotors();
+    document.getElementById("motors").value = "holybro2216_920_10";
+    updateMotor();
+</script>
+</body>
+</html>

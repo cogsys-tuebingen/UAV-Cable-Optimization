@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAV Cable Optimization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        .tool {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            padding-top: 0px;
+            padding-bottom: 5px;
+            border-radius: 8px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        a.button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 15px;
+            text-decoration: none;
+            background-color: #007acc;
+            color: #fff;
+            border-radius: 5px;
+        }
+
+        a.button:hover {
+            background-color: #005fa3;
+        }
+
+        .code {
+            background-color: #f5f5f5;
+            padding: 1em;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em;
+            line-height: 1.4em;
+            border: 1px solid #ddd;
+        }
+    </style>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2XCQRDB4WS"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+
+        gtag('js', new Date());
+        gtag('config', 'G-2XCQRDB4WS');
+    </script>
+</head>
+<body>
+<div class="container">
+    <h1>Tethered UAV Cable Optimization</h1>
+    <p>Welcome to the tethered UAV cable optimization landing page. These tools are based on the research presented in
+        the paper "<a href="https://arxiv.org/pdf/2504.07802" target="_blank"><strong>Cable Optimization and Drag
+            Estimation for Tether-Powered Multirotor UAVs</strong></a>". They help design efficient tethered UAVs by
+        optimizing cable parameters and estimating aerodynamic drag. If you use them in your research, please cite the
+        paper.</p>
+    <div>
+        <pre class="code"><code>@inproceedings{beffert2025icuas,
+  author    = {Beffert, Max and Zell, Andreas},
+  title     = {Cable Optimization and Drag Estimation for Tether-Powered Multirotor UAVs},
+  booktitle = {2025 International Conference on Unmanned Aircraft Systems (ICUAS)},
+  publisher = {IEEE},
+  year      = {2025},
+  month     = May
+  }</code></pre>
+    </div>
+    <div class="tool">
+        <h2>Cable Optimization</h2>
+        <p>This tool assists in selecting the optimal tether cable for tether-powered multirotor UAVs, balancing
+            electrical losses, weight, and aerodynamic drag. It supports both predefined and custom motor efficiency
+            curves, allowing users to tailor calculations to their specific UAV setup.</p>
+        <p><a class="button" href="CableOptimization/index.html">Go to Cable Optimization Tool</a></p>
+    </div>
+
+    <div class="tool">
+        <h2>Drag Estimation</h2>
+        <p>This tool estimates the forward drag coefficient of a UAV based on flight data from ArduCopter log files. The
+            results can be used into the Cable Optimization tool to optimize for
+            forward flight.</p>
+        <p><a class="button" href="DragEstimation/index.html">Go to Drag Estimation Tool</a></p>
+    </div>
+
+    <div class="footer">
+        <p>The code for these tools, as well as a Python example, is available on <a
+                href="https://github.com/cogsys-tuebingen/UAV-Cable-Optimization" target="_blank">GitHub</a>.</p>
+    </div>
+</div>
+</body>
+</html>

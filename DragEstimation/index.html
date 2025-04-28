@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<head>
+    <title>UAV Drag Estimation</title>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-2XCQRDB4WS"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+
+        gtag('js', new Date());
+        gtag('config', 'G-2XCQRDB4WS');
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+
+    <!-- KaTeX to render latex equations -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css"
+          integrity="sha384-zh0CIslj+VczCZtlzBcjt5ppRcsAmDnRem7ESsYwWwg3m/OaJ2l4x7YBZl9Kxxib" crossorigin="anonymous">
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"
+            integrity="sha384-Rma6DA2IPUwhNxmrB/7S3Tno0YY7sFu9WSYMCuulLhIqYSGZ2gKCJWIqhBWqMQfh"
+            crossorigin="anonymous"></script>
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"
+            integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"
+            onload="renderMathInElement(document.body);"></script>
+
+    <script type="module">
+        import {attachContextMenu} from "./downloadSvg.js";
+
+        attachContextMenu(".downloadable"); // Attach to divs with this class
+    </script>
+
+
+    <style>
+        input[type="number"] {
+            width: 60px;
+            appearance: textfield; /* Remove up/down buttons */
+            -moz-appearance: textfield;
+            -webkit-appearance: textfield;
+            margin-right: 20px;
+        }
+
+        .footer {
+            margin-left: 10px;
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+<h1 style="margin-left:10px;">Drag Estimation</h1>
+<div style="margin:10px;">
+    <p>
+        This tool estimates a forward drag function from an ArduCopter log file of a specific flight pattern.<br>
+        It uses the <code>XKF1</code> message, which is logged by default, so no changes are required on the drone side.<br>
+    </p>
+    <p>
+        The flight pattern involves flying backward and forward at different pitch angles while maintaining a consistent
+        altitude and yaw.<br>
+        The flight should be conducted in low or consistent wind conditions and should be as symmetric as possible, for
+        example;<br>
+        Flying forward 50m at 5° pitch, flying backwards at -5° pitch, then repeating for the next pitch
+        angle.<br>
+        It is recommended to use the angle-based “AltHold” mode, but GPS-based modes like “Loiter” can also work.</p>
+    <p>If no log file is available, the <b>“Load Example”</b> button can be used. Otherwise, follow these steps:</p>
+    <ol>
+        <li>Click <b>“Browse”</b> and upload an ArduCopter dataflash log file in <code>.bin</code> format.</li>
+        <li>Use start and end time to trim the data after takeoff and getting into position and before landing.</li>
+        <li>Optionally, configure a pitch offset to counteract imprecise gyro calibration.</li>
+        <li>Enter the drone’s mass and press <b>“Estimate”</b>.</li>
+        <li>To save plots as SVG vector files, right-click on them and select <b>“Download SVG”</b>.</li>
+    </ol>
+</div>
+<div style="margin:10px;">
+    <button id="devTools" style="display:none" onclick="loadPythonCode()">
+        <img style="height:1em; width:1em;" src="graphics/wrench.svg" alt="Dev">
+    </button>
+    <button id="example" class="track-button" data-analyticsLabel="drag_example" onclick="loadExample()" disabled>Load
+        Example
+    </button>
+    <input type="file" id="fileInput" accept=".bin" class="track-button" data-analyticsLabel="drag_custom"
+           onchange="fileChanged()" disabled>
+</div>
+<div style="margin:10px;">
+    <label for="start">Start [s]:</label>
+    <input type="number" id="start" value="0" onchange="processData()">
+    <label for="end">End [s]:</label>
+    <input type="number" id="end" value="0" onchange="processData()">
+    <label for="pitchOffset">Pitch Offset [deg]:</label>
+    <input type="number" id="pitchOffset" value="0" onchange="processData()">
+    <label for="droneMass">Drone Mass [kg]:</label>
+    <input type="number" id="droneMass">
+    <button onclick="estimateDrag()" id="estimateButton" class="track-button" data-analyticsLabel="drag_example"
+            disabled>Estimate
+    </button>
+</div>
+<div id="status" style="margin:10px; line-height:1em;">Initializing...</div>
+<div id="container" style="display:flex; flex-direction:column; margin:10px;">
+    <div style="display:flex; flex-direction:row; flex-wrap:wrap;">
+        <div id="input_data" class="downloadable" data-filename="input_data.svg" style="align-self: flex-start;"></div>
+        <div><br>
+            \( A(\theta)=A_f*\cos{|\theta|}+A_t*\sin{|\theta|} \)<br>
+            \( F_D(v, \theta)=\frac{1}{2}\rho_{air}A(\theta)((v-w)^2 + j(v-w)) \)<br><br>
+            <table>
+                <tr>
+                    <td>\( A_f \)</td>
+                    <td>\( = \)</td>
+                    <td><b id="result_Af"></b></td>
+                    <td><span id="result_Af_stat"></span></td>
+                </tr>
+                <tr>
+                    <td>\( A_t \)</td>
+                    <td>\( = \)</td>
+                    <td><b id="result_At"></b></td>
+                    <td><span id="result_At_stat"></span></td>
+                </tr>
+                <tr>
+                    <td>\( j \)</td>
+                    <td>\( = \)</td>
+                    <td><b id="result_j"></b></td>
+                    <td><span id="result_j_stat"></span></td>
+                </tr>
+                <tr>
+                    <td>\( w \)</td>
+                    <td>\( = \)</td>
+                    <td><b id="result_w"></b></td>
+                    <td><span id="result_w_stat"></span></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div id="results" style="display:flex; flex-direction:row; flex-wrap:wrap;">
+        <div id="result_2D" class="downloadable" data-filename="2D_Drag_Function.svg"></div>
+        <div id="result_3D" class="downloadable" data-filename="3D_Drag_Function.svg"
+             style="align-self: flex-start;"></div>
+    </div>
+</div>
+<div class="footer">
+    <p>The code for this tools, as well as a Python example, is available on <a
+            href="https://github.com/cogsys-tuebingen/UAV-Cable-Optimization" target="_blank">GitHub</a>.
+    </p>
+</div>
+
+<script>
+    document.querySelectorAll(".track-button").forEach(button => {
+        button.addEventListener("click", function () {
+            gtag("event", "button_click", {
+                "event_category": "interaction",
+                "event_label": this.getAttribute("data-analyticsLabel")
+            });
+        });
+    });
+</script>
+
+<script>
+    let DataflashParser
+    const parser = import('./JsDataflashParser/parser.js').then((mod) => {
+        DataflashParser = mod.default;
+    });
+
+    let pyodide;
+    let pandas;
+    let numpy;
+    let scipy;
+    let matplotlib;
+    let python;
+    let visualization;
+    let drag;
+
+    if (window.location.protocol === "file:") {
+        document.getElementById("devTools").style.display = "inline-block";
+    }
+
+
+    async function initPyodide() {
+        try {
+            pyodide = await loadPyodide();
+            document.getElementById('example').disabled = false;
+            document.getElementById('fileInput').disabled = false;
+            document.getElementById('status').innerHTML = 'Ready';
+
+            // Install required packages
+            pandas = pyodide.loadPackage("pandas");
+            numpy = pyodide.loadPackage("numpy");
+            scipy = pyodide.loadPackage("scipy");
+            matplotlib = pyodide.loadPackage("matplotlib");
+
+            await loadPythonCode();
+
+        } catch (error) {
+            console.error('Error initializing Pyodide:', error);
+        }
+    }
+
+    async function loadPythonCode() {
+        // Fetch the Python code from the .py file
+        const response = await fetch('DragEstimation.py');
+        const pythonCode = await response.text();
+        // Run the Python code to define the class and function
+        python = pyodide.runPythonAsync(pythonCode);
+
+        const response_vis = await fetch('Visualization.py');
+        const pythonCode_vis = await response_vis.text();
+        visualization = pyodide.runPythonAsync(pythonCode_vis);
+    }
+
+    // Call initPyodide immediately
+    initPyodide();
+
+    function reset() {
+        uploadedFileName = null;
+        document.getElementById('estimateButton').disabled = true;
+
+        document.getElementById('result_Af').innerHTML = "";
+        document.getElementById('result_At').innerHTML = "";
+        document.getElementById('result_j').innerHTML = "";
+        document.getElementById('result_w').innerHTML = "";
+        document.getElementById('input_data').innerHTML = "";
+        document.getElementById('result_2D').innerHTML = "";
+        document.getElementById('result_3D').innerHTML = "";
+
+        document.getElementById('start').value = 0;
+        document.getElementById('end').value = 0;
+    }
+
+    async function loadExample() {
+        reset();
+
+        try {
+            document.getElementById('example').disabled = true;
+            document.getElementById('fileInput').disabled = true;
+            document.getElementById('fileInput').value = "";
+            document.getElementById('start').disabled = true;
+            document.getElementById('end').disabled = true;
+            document.getElementById('pitchOffset').disabled = true;
+            document.getElementById('droneMass').disabled = true;
+            document.getElementById('status').innerHTML = 'Loading example...';
+            if (drag) drag.destroy();
+
+            await python;
+            //instantiate class in python
+            await pyodide.runPythonAsync('drag = DragEstimation()');
+            //grab class from python to be used in java script
+            drag = pyodide.globals.get("drag");
+
+            //load example data from json
+            const response = await fetch('example.json');
+            const data = await response.text();
+
+            //feed data from java script into python
+            drag.data = pyodide.toPy(JSON.parse(data));
+
+            await pandas;
+            await numpy;
+            await scipy
+            document.getElementById('status').innerHTML = 'Processing data...';
+
+            drag.process_data(0.25, 0.9, 1.4955439766569403);
+
+            await matplotlib;
+            await visualization;
+            await pyodide.runPythonAsync("visualize_input(drag, browser=True)");
+
+            document.getElementById('droneMass').value = 1.549;
+
+            estimateDrag();
+        } catch (error) {
+            console.error('Error loading example:', error);
+            document.getElementById('status').innerHTML = 'Error loading example: ' + error.message;
+        }
+        document.getElementById('example').disabled = false;
+        document.getElementById('fileInput').disabled = false;
+    }
+
+    async function fileChanged() {
+        reset();
+        await loadFile();
+    }
+
+    // Function to handle file upload and processing
+    async function loadFile() {
+        document.getElementById('example').disabled = true;
+        document.getElementById('fileInput').disabled = true;
+        document.getElementById('start').disabled = false;
+        document.getElementById('end').disabled = false;
+        document.getElementById('pitchOffset').disabled = false;
+        document.getElementById('droneMass').disabled = false;
+
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+
+        document.getElementById('status').innerHTML = 'Reading file...';
+
+        try {
+            await parser;
+            let log = new DataflashParser();
+
+            if (drag) drag.destroy();
+
+            await python;
+            //instantiate class in python
+            await pyodide.runPythonAsync('drag = DragEstimation()');
+            //grab class from python to be used in java script
+            drag = pyodide.globals.get("drag");
+
+            let reader = new FileReader();
+            reader.onload = async function (e) {
+                log.processData(reader.result, []);
+                const xkf1 = log.get_instance("XKF1", 0);
+
+                const data = Array.from(xkf1.TimeUS).map((time, index) => ({
+                    time,
+                    pitch: xkf1.Pitch[index],
+                    roll: xkf1.Roll[index],
+                    yaw: xkf1.Yaw[index],
+                    VE: xkf1.VE[index],
+                    VN: xkf1.VN[index],
+                    VD: xkf1.VD[index]
+                }));
+                //feed data from java script into python
+                drag.data = pyodide.toPy(data);
+
+                document.getElementById('status').innerHTML = 'File read successfully';
+
+                await processData();
+            }
+            reader.readAsArrayBuffer(file);
+        } catch (error) {
+            console.error('Error loading file:', error);
+            document.getElementById('status').innerHTML = 'Error loading file: ' + error.message;
+        }
+        document.getElementById('example').disabled = false;
+        document.getElementById('fileInput').disabled = false;
+    }
+
+    async function processData() {
+        document.getElementById('estimateButton').disabled = true;
+        document.getElementById('status').innerHTML = 'Processing data...';
+
+        let start = parseFloat(document.getElementById('start').value);
+        let end = parseFloat(document.getElementById('end').value);
+        let pitchOffset = parseFloat(document.getElementById('pitchOffset').value);
+        try {
+            await pandas;
+            await numpy;
+            await scipy
+            drag.process_data_s(start || 0, end || 0, pitchOffset || 0);
+
+            await matplotlib;
+            await visualization;
+            await pyodide.runPythonAsync("visualize_input(drag, browser=True)");
+
+            document.getElementById('status').innerHTML = 'Data processed';
+        } catch (error) {
+            console.error('Error processing data:', error);
+            document.getElementById('status').innerHTML = 'Error processing data: ' + error.message;
+        }
+        document.getElementById('estimateButton').disabled = false;
+    }
+
+    // Function to call Python from JavaScript
+    async function estimateDrag() {
+        document.getElementById('status').innerHTML = 'Loading modules...';
+
+        try {
+            await scipy;
+            await numpy;
+            document.getElementById('status').innerHTML = 'Fitting model...';
+
+            let droneMass = parseFloat(document.getElementById('droneMass').value);
+            if (isNaN(droneMass) || droneMass === 0) {
+                alert("Please enter drone mass!")
+                return;
+            }
+
+            drag.fit(droneMass);
+            const popt = drag.popt.toJs();
+            const pstdev = drag.pstdev.toJs();
+            const pcvar = drag.pcvar.toJs();
+
+            // Display the results
+            document.getElementById('result_Af').innerHTML = `${popt[0].toExponential(3)} [m²]`;
+            document.getElementById('result_Af_stat').innerHTML = `± ${pstdev[0].toExponential(3)} (${(pcvar[0] * 100).toFixed(2)}%)`;
+            document.getElementById('result_At').innerHTML = `${popt[1].toExponential(3)} [m²]`;
+            document.getElementById('result_At_stat').innerHTML = `± ${pstdev[1].toExponential(3)} (${(pcvar[1] * 100).toFixed(2)}%)`;
+            document.getElementById('result_j').innerHTML = `${popt[2].toFixed(3)} [m/s]`;
+            document.getElementById('result_j_stat').innerHTML = `± ${pstdev[2].toFixed(3)} (${(pcvar[2] * 100).toFixed(2)}%)`;
+            document.getElementById('result_w').innerHTML = `${popt[3].toFixed(3)} [m/s]`;
+            document.getElementById('result_w_stat').innerHTML = `± ${pstdev[3].toFixed(3)} (${(pcvar[3] * 100).toFixed(2)}%)`;
+
+            document.getElementById('status').innerHTML = 'Plotting results...';
+            await pyodide.runPythonAsync("visualize_drag(drag, browser=True)");
+            document.getElementById('status').innerHTML = 'Done &#128568;';
+
+        } catch (error) {
+            console.error('Error estimating drag:', error);
+            document.getElementById('status').innerHTML = 'Error estimating drag: ' + error.message;
+        }
+    }
+</script>
+</body>
+</html>

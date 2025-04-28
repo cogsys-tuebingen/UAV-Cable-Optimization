@@ -1,0 +1,3 @@
+[submodule "DragEstimation/JsDataflashParser"]
+	path = DragEstimation/JsDataflashParser
+	url = https://github.com/Williangalvani/JsDataflashParser
