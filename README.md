@@ -1,6 +1,6 @@
 # Cable Optimization and Drag Estimation for Tether-Powered Multirotor UAVs
 
-[![Paper](https://img.shields.io/badge/Paper-arXiv-red?style=flat&logo=arxiv)](https://arxiv.org/pdf/2504.07802)  [![Demo](https://img.shields.io/badge/Interactive-Demo-blue?style=flat&logo=github)](https://cogsys-tuebingen.github.io/UAV-Cable-Optimization/)  [![Citations](https://img.shields.io/badge/dynamic/json?label=Citations&query=citationCount&url=https://api.semanticscholar.org/graph/v1/paper/arXiv:2504.07802?fields=citationCount&color=blue&cacheSeconds=86400&logo=semanticscholar)](https://arxiv.org/abs/2504.07802)
+[![Paper](https://img.shields.io/badge/Paper-arXiv-red?style=flat&logo=arxiv)](https://arxiv.org/pdf/2504.07802)  [![Demo](https://img.shields.io/badge/Interactive-Demo-blue?style=flat&logo=github)](https://cogsys-tuebingen.github.io/UAV-Cable-Optimization/)  [![Citations](https://img.shields.io/badge/dynamic/json?label=Citations&query=$.papers[?(@.paper_id=='2504.07802')].citations&url=https://gist.githubusercontent.com/tommaier123/377d793a6ca2cb79e588d8781d76b521/raw/citation_counts.json&color=blue&logo=semanticscholar)](https://arxiv.org/abs/2504.07802)
 
 ## Abstract
 
