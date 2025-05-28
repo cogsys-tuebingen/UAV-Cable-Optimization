@@ -18,11 +18,11 @@ The approach combines physics-informed modeling with system identification to co
 If you use this work in your own research, please cite:
 
 ```bibtex
-@inproceedings{beffert2025icuas,
-  author    = {Beffert, Max and Zell, Andreas},
-  title     = {Cable Optimization and Drag Estimation for Tether-Powered Multirotor UAVs},
-  booktitle = {2025 International Conference on Unmanned Aircraft Systems (ICUAS)},
-  publisher = {IEEE},
-  year      = {2025},
-  month     = May
+@inproceedings{11007916,
+  author={Beffert, Max and Zell, Andreas},
+  booktitle={2025 International Conference on Unmanned Aircraft Systems (ICUAS)}, 
+  title={Cable Optimization and Drag Estimation for Tether-Powered Multirotor UAVs}, 
+  year={2025},
+  pages={15-21},
+  doi={10.1109/ICUAS65942.2025.11007916}}
 }
