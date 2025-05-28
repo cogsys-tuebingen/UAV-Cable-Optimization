@@ -24,5 +24,5 @@ If you use this work in your own research, please cite:
   title={Cable Optimization and Drag Estimation for Tether-Powered Multirotor UAVs}, 
   year={2025},
   pages={15-21},
-  doi={10.1109/ICUAS65942.2025.11007916}}
+  doi={10.1109/ICUAS65942.2025.11007916}
 }
