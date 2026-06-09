@@ -12,6 +12,7 @@ The approach combines physics-informed modeling with system identification to co
 
 ## Resources
 - [Paper (arXiv)](https://arxiv.org/pdf/2504.07802)
+- [Paper (IEEE)](https://ieeexplore.ieee.org/document/11007916)
 - [Interactive Web Demo](https://cogsys-tuebingen.github.io/UAV-Cable-Optimization/)
 
 ## Citation
